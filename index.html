@@ -8,10 +8,27 @@
     <link rel="stylesheet" href="./style.css">
     <link rel="icon" href="./favicon.ico" type="image/x-icon">
   </head>
+  
   <body>
     <main>
         <h1>Welcome to My Website</h1>  
     </main>
-    <script src="index.js"></script>
+  
   </body>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module">    
+    const supabase = window.supabase.createClient('https://mwfhieyoqukgntpefijn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13ZmhpZXlvcXVrZ250cGVmaWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzOTU4NDUsImV4cCI6MjA2ODk3MTg0NX0.0ZLQjjO1AWibBhWZdueGmgbRv8QF_r7uyRmMExf2_tY')
+    const {data,error}=await supabase.from('qtls').select('*').eq('variant','1018693').eq('gene','IGHV3-66').single()
+    if (error) {
+      console.error('Supabase error:', error)
+      alert('Error: ' + error.message)
+    } else {
+      console.log('Data:', data)
+      alert(JSON.stringify(data, null, 2))
+    }
+
+  </script>
+  
+
 </html>
