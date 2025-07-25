@@ -18,7 +18,13 @@
     <label for="geneInput">Gene</label>
     <input id="geneInput" placeholder="IGHV3-64">
     <button id="searchButton">Search</button>
-    <div id="boxplot" style="width:600px;height:400px;margin-top:1em;"></div>
+    <button id="clearPlots" style="margin-top:1em;">Clear Plots</button>
+    <div id="plots" style="
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-gap: 1em;
+      margin-top: 1em;
+    "></div>
     
     <section id="accordions" style="margin-top:1em;">
 
@@ -56,6 +62,13 @@
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
   const supabase = createClient('https://mwfhieyoqukgntpefijn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13ZmhpZXlvcXVrZ250cGVmaWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzOTU4NDUsImV4cCI6MjA2ODk3MTg0NX0.0ZLQjjO1AWibBhWZdueGmgbRv8QF_r7uyRmMExf2_tY');
+
+  let plotCount = 0;
+  const plotsContainer = document.getElementById('plots');
+  document.getElementById('clearPlots').addEventListener('click', () => {
+    plotsContainer.innerHTML = '';
+    plotCount = 0;
+  });
 
   document.getElementById("searchButton")
     .addEventListener("click", onSearch);
@@ -170,14 +183,20 @@
         type: 'box'
       }));
     console.log(traces)
+    const plotId = `boxplot-${plotCount++}`;
+    const wrapper = document.createElement('div');
+    wrapper.id = plotId;
+    wrapper.style = 'width:100%; height:300px;';  // height can be fixed
+    plotsContainer.appendChild(wrapper);
 
-    // plot
-    Plotly.newPlot('boxplot', traces, {
+    // plot into it
+    Plotly.newPlot(plotId, traces, {
       title: `${gene} expression by ${variant} genotype`,
       xaxis: { title: 'Genotype' },
       yaxis: { title: 'Expression' },
       margin: { t:40, l:50, r:20, b:40 }
     });
+
   }
 </script>
 
