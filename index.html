@@ -13,10 +13,15 @@
         <h1>Welcome to My Website</h1>  
     </main>
     
+
     <label for="snpInput">SNP ID</label>
-    <input id="snpInput" placeholder="1027214">
+    <input id="snpInput" list="snp-list" placeholder="1027214">
+    <datalist id="snp-list"></datalist>
+
     <label for="geneInput">Gene</label>
-    <input id="geneInput" placeholder="IGHV3-64">
+    <input id="geneInput" list="gene-list" placeholder="IGHV3-64">
+    <datalist id="gene-list"></datalist>
+
     <button id="searchButton">Search</button>
     <button id="clearPlots" style="margin-top:1em;">Clear Plots</button>
     <div id="plots" style="
@@ -72,12 +77,58 @@
 
   const supabase = createClient('https://mwfhieyoqukgntpefijn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13ZmhpZXlvcXVrZ250cGVmaWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzOTU4NDUsImV4cCI6MjA2ODk3MTg0NX0.0ZLQjjO1AWibBhWZdueGmgbRv8QF_r7uyRmMExf2_tY');
 
+  
+
   let plotCount = 0;
   const plotsContainer = document.getElementById('plots');
   document.getElementById('clearPlots').addEventListener('click', () => {
     plotsContainer.innerHTML = '';
     plotCount = 0;
   });
+
+  // Call this once at startup:
+  setupAutocomplete('geneInput', 'gene-list', 'gene');
+  setupAutocomplete('snpInput',  'snp-list',  'variant');
+
+  function setupAutocomplete(inputId, listId, column) {
+    const inp   = document.getElementById(inputId);
+    const dataL = document.getElementById(listId);
+
+    let lastTerm = '';
+    inp.addEventListener('input', async e => {
+      const term = e.target.value.trim();
+      if (term === lastTerm || term.length < 1) return;
+      lastTerm = term;
+
+      // clear old options
+      dataL.innerHTML = '';
+
+      // search _all_ four tables for distinct matches
+      const tables = ['M_all_rank','G_all_rank','final_qtls_noIGKV1-13DEL','K_L_guQTL_cleaned'];
+      const seen   = new Set();
+
+      await Promise.all(tables.map(async tbl => {
+        const { data, error } = await supabase
+          .from(tbl)
+          .select(column)
+          .ilike(column, `%${term}%`)
+          .limit(10);              // keep it snappy
+
+        if (data) {
+          data.forEach(r => {
+            const val = r[column];
+            if (val && !seen.has(val)) {
+              seen.add(val);
+              const opt = document.createElement('option');
+              opt.value = val;
+              dataL.appendChild(opt);
+            }
+          });
+        }
+      }));
+    });
+  }
+
 
   document.getElementById("searchButton")
     .addEventListener("click", onSearch);
