@@ -45,3 +45,14 @@ Use `pandas`'s `df.info()` function to check the columns' data types, and make t
 In this case, three columns typed `int8` needed to change to `float8`.
 
 It is safe to ignore the error `"" is an invalid value`. Try uploading again where it says `This table is empty.. Upload CSV`
+
+## Reporting an issue
+Each issue must be clearly defined and have:
+1. Title
+2. Detailed description
+3. Branch
+4. Steps to reproduce
+5. Expected vs. Actual Behavior
+6. System, OS version & Browser
+7. Screenshots & logs
+8. References: (i.e. links to relevant code, related issues, pull requests, documentation)
