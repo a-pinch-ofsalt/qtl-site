@@ -19,7 +19,26 @@
     <input id="geneInput" placeholder="IGHV3-64">
     <button id="searchButton">Search</button>
     <div id="boxplot" style="width:600px;height:400px;margin-top:1em;"></div>
+    
+    <section id="accordions" style="margin-top:1em;">
+
+      <details>
+        <summary>M_all_rank</summary>
+        <div class="table-panel" data-table="M_all_rank"></div>
+      </details>
   
+      <details>
+        <summary>G_all_rank</summary>
+        <div class="table-panel" data-table="G_all_rank"></div>
+      </details>
+  
+      <details>
+        <summary>final_qtls_noIGKV1-13DEL</summary>
+        <div class="table-panel" data-table="final_qtls_noIGKV1-13DEL"></div>
+      </details>
+  
+    </section>
+
   </body>
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -40,76 +59,56 @@
 
   document.getElementById("searchButton")
     .addEventListener("click", onSearch);
+    async function onSearch() {
+      const snp  = document.getElementById("snpInput").value;
+      const gene = document.getElementById("geneInput").value;
+      const panels = document.querySelectorAll('.table-panel');
 
-  async function onSearch() {
-    const snp   = document.getElementById("snpInput").value;
-    const gene  = document.getElementById("geneInput").value;
-    let result;
+      // for each accordion panel, pull its table name from data-attribute
+      for (let panel of panels) {
+        const tableName = panel.dataset.table;
+        let query = supabase.from(tableName).select('*');
+        if (snp)    query = query.eq('variant', snp);
+        if (gene)   query = query.eq('gene', gene);
 
-    if (snp && gene) {
-      result = await supabase
-        .from('qtls')
-        .select('*')
-        .eq('variant', snp)
-        .eq('gene', gene);
-    } else if (snp) {
-      result = await supabase
-        .from('qtls')
-        .select('*')
-        .eq('variant', snp);
-    } else if (gene) {
-      result = await supabase
-        .from('qtls')
-        .select('*')
-        .eq('gene', gene);
-    } else {
-      result = await supabase
-        .from('qtls')
-        .select('*');
-    }
-
-    if (result.error) {
-      console.error(result.error);
-      return;
-    }
-    renderTable(result.data);
-  }
-
-  function renderTable(rows) {
-    const container = document.getElementById('result-table');
-    container.innerHTML = '';
-    if (!rows || rows.length === 0) {
-      container.innerText = 'No results found.';
-      return;
-    }
-
-    const table = document.createElement('table');
-    table.border = 1;
-
-    // header
-    const header = table.insertRow();
-    Object.keys(rows[0]).forEach(key => {
-      const th = document.createElement('th');
-      th.innerText = key;
-      header.appendChild(th);
-    });
-
-    // body
-    rows.forEach(row => {
-      const tr = table.insertRow();
-      Object.entries(row).forEach(([key, value]) => {
-        const td = tr.insertCell();
-        td.innerText = value;
-        if (key === 'variant') {
-          td.style.cursor = 'pointer';
-          td.style.textDecoration = 'underline';
-          td.addEventListener('click', () => showQtlPlot(row.variant, row.gene));
+        const { data, error } = await query;
+        panel.innerHTML = '';             // clear any old table
+        if (error) {
+          panel.innerText = `Error: ${error.message}`;
+        } else if (!data || data.length === 0) {
+          panel.innerText = 'No results found.';
+        } else {
+          panel.appendChild(buildTable(data));
         }
-      });
-    });
+      }
+    }
 
-    container.appendChild(table);
-  }
+    // generic table builder, returns a <table> element
+    function buildTable(rows) {
+      const table = document.createElement('table');
+      table.border = 1;
+      const header = table.insertRow();
+      Object.keys(rows[0]).forEach(key => {
+        const th = document.createElement('th');
+        th.innerText = key;
+        header.appendChild(th);
+      });
+
+      rows.forEach(row => {
+        const tr = table.insertRow();
+        Object.entries(row).forEach(([key, val]) => {
+          const td = tr.insertCell();
+          td.innerText = val;
+          if (key === 'variant') {
+            td.style.cursor = 'pointer';
+            td.style.textDecoration = 'underline';
+            td.addEventListener('click', () => showQtlPlot(row.variant, row.gene));
+          }
+        });
+      });
+      return table;
+    }
+
 
   async function showQtlPlot(variant, gene) {
     console.log(variant, gene)
