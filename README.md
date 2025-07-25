@@ -1,8 +1,16 @@
 # qtl-site
-## Todo
-1. Link to raw data
-2. Query by gene name. Output table.
-3. Query by rsid. Output table.
-4. Select queries for box plot.
+## TODO
+1. [DONE] Link to raw data
+2. [DONE] Query by gene name. Output table.
+3. [DONE] Query by rsid. Output table.
+4. [DONE] Select queries for box plot.
+5. 
+    a. [DONE] Receive IGK and IGL tables from Jacquelyn
+    b. Integrate tables into the website
+6. Add manhattan plots
+10. Properly label the plots
+9. Add download link for plots
+7. [BUG] First plot gets cut in half by second one
+8. [BUG] CSVs should only be generated once download button is clicked. This results in expensive client-side calculations every search
 
 supabase password: oscarlr
