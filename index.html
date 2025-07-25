@@ -125,7 +125,14 @@
         panel.appendChild(tableEl);
 
         // Manhattan
-        await plotPanelManhattan(tableName, gene, manHolder);
+        if (gene) {
+          await plotPanelManhattan(tableName, gene, manHolder);
+        } else if (snp) {
+          await plotPanelBySnp(tableName, snp, manHolder);
+        }
+
+
+
 
         // auto‑open the detail so you can see it
         panel.parentElement.open = true;
@@ -163,6 +170,54 @@
       margin:{ t:30, b:80, l:50, r:20 }
     });
   }
+
+    // … after plotPanelManhattan …
+
+  // for SNP searches: x = genes, y = –log10(p)
+  async function plotPanelBySnp(tableName, snp, holderDiv) {
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('gene, pvalue')
+      .eq('variant', snp);
+
+    if (error || !data.length) return;
+
+    // sort genes alphanumerically:
+    const genes = data
+      .map(d => d.gene)
+      .sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+
+    // map p‑values in the same order:
+    const y = genes.map(g => {
+      const row = data.find(d => d.gene === g);
+      return -Math.log10(row.pvalue);
+    });
+
+    const id = `man-snp-${tableName}-${plotCount++}`;
+    const plotDiv = document.createElement('div');
+    plotDiv.id = id;
+    plotDiv.style = 'width:100%; height:250px; margin-bottom:0.5em;';
+    holderDiv.appendChild(plotDiv);
+
+    Plotly.newPlot(id, [{
+      x: genes,
+      y: y,
+      type: 'bar',
+      marker: { line: { width: 1 } }
+    }], {
+      title: `–log₁₀(p) in ${tableName} for SNP ${snp}`,
+      xaxis: {
+        type: 'category',
+        categoryorder: 'array',
+        categoryarray: genes,
+        tickangle: -45,
+        title: 'Gene'
+      },
+      yaxis: { title: '–log₁₀(p‑value)' },
+      margin: { t: 30, b: 80, l: 50, r: 20 }
+    });
+  }
+
 
 
     // generic table builder, returns a <table> element
