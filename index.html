@@ -78,6 +78,24 @@
         } else if (!data || data.length === 0) {
           panel.innerText = 'No results found.';
         } else {
+          const csvRows = [];
+          const headers = Object.keys(data[0]);
+          csvRows.push(headers.join(','));
+          data.forEach(row => {
+            csvRows.push(headers.map(h => JSON.stringify(row[h] ?? '')).join(','));
+          });
+          const csvString = csvRows.join('\n');
+          const blob = new Blob([csvString], { type: 'text/csv' });
+          const url  = URL.createObjectURL(blob);
+
+          const dl = document.createElement('a');
+          dl.href = url;
+          dl.download = `${tableName}.csv`;
+          dl.innerText = 'Download CSV';
+          dl.style.display = 'inline-block';
+          dl.style.marginTop = '0.5em';
+
+          panel.appendChild(dl);
           panel.appendChild(buildTable(data));
         }
       }
