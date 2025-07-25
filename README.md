@@ -1,4 +1,5 @@
 # qtl-site
+
 ## TODO
 1. [DONE] Link to raw data
 2. [DONE] Query by gene name. Output table.
@@ -13,4 +14,18 @@
 7. [BUG] First plot gets cut in half by second one
 8. [BUG] CSVs should only be generated once download button is clicked. This results in expensive client-side calculations every search
 
-supabase password: oscarlr
+supabase password: `oscarlr`
+
+
+## CAVEATS ON ADDING TABLES TO SUPABASE:
+1. Set columns `variant` and `gene` as primary keys. 
+2. To prevent NO data being returned after a data query, disable RLS (Row-level security).
+3. Supabase cannot always correctly infer the a table column's data data type, resulting in an error like this when uploading:
+
+> Table K_L_guQTL_cleaned has been created but we ran into an error while inserting rows: invalid input syntax for type bigint: "170.0"
+> Do check your spreadsheet if there are any discrepancies.
+
+Use `pandas`'s `df.info()` function to check the columns' data types, and make the appropriate change.
+In this case, three columns typed `int8` needed to change to `float8`.
+
+It is safe to ignore the error `"" is an invalid value`. Try uploading again where it says `This table is empty.. Upload CSV`
