@@ -17,7 +17,21 @@
 supabase password: `oscarlr`
 
 
-## CAVEATS ON ADDING TABLES TO SUPABASE:
+## HOW TO ADD TABLES:
+### In code:
+Change table `table_name` and duplicate one of these 
+```html
+<details>
+    <summary>table_name</summary>
+    <div class="table-panel" data-table="table_name"></div>
+</details>
+```
+into
+```html
+<section id="accordions" style="margin-top:1em;">
+```
+
+### In supabase
 1. Set columns `variant` and `gene` as primary keys. 
 2. To prevent NO data being returned after a data query, disable RLS (Row-level security).
 3. Supabase cannot always correctly infer the a table column's data data type, resulting in an error like this when uploading:
