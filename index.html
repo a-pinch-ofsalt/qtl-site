@@ -30,21 +30,25 @@
 
       <details>
         <summary>M_all_rank</summary>
+        <div class="manhattan-holder"></div>
         <div class="table-panel" data-table="M_all_rank"></div>
       </details>
   
       <details>
         <summary>G_all_rank</summary>
+        <div class="manhattan-holder"></div>
         <div class="table-panel" data-table="G_all_rank"></div>
       </details>
   
       <details>
         <summary>final_qtls_noIGKV1-13DEL</summary>
+        <div class="manhattan-holder"></div>
         <div class="table-panel" data-table="final_qtls_noIGKV1-13DEL"></div>
       </details>
 
       <details>
         <summary>K_L_guQTL_cleaned</summary>
+        <div class="manhattan-holder"></div>
         <div class="table-panel" data-table="K_L_guQTL_cleaned"></div>
       </details>
   
@@ -77,74 +81,115 @@
 
   document.getElementById("searchButton")
     .addEventListener("click", onSearch);
-    async function onSearch() {
-      const snp  = document.getElementById("snpInput").value;
-      const gene = document.getElementById("geneInput").value;
-      const panels = document.querySelectorAll('.table-panel');
+  async function onSearch() {
+    const snp    = document.getElementById("snpInput").value;
+    const gene   = document.getElementById("geneInput").value;
+    const panels = document.querySelectorAll('.table-panel');
 
-      // for each accordion panel, pull its table name from data-attribute
-      for (let panel of panels) {
-        const tableName = panel.dataset.table;
-        let query = supabase.from(tableName).select('*');
-        if (snp)    query = query.eq('variant', snp);
-        if (gene)   query = query.eq('gene', gene);
+    for (let panel of panels) {
+      const tableName = panel.dataset.table;
+      let query = supabase.from(tableName).select('*');
+      if (snp)  query = query.eq('variant', snp);
+      if (gene) query = query.eq('gene', gene);
 
-        const { data, error } = await query;
-        panel.innerHTML = '';             // clear any old table
-        if (error) {
-          panel.innerText = `Error: ${error.message}`;
-        } else if (!data || data.length === 0) {
-          panel.innerText = 'No results found.';
-        } else {
-          const csvRows = [];
-          const headers = Object.keys(data[0]);
-          csvRows.push(headers.join(','));
-          data.forEach(row => {
-            csvRows.push(headers.map(h => JSON.stringify(row[h] ?? '')).join(','));
-          });
-          const csvString = csvRows.join('\n');
-          const blob = new Blob([csvString], { type: 'text/csv' });
-          const url  = URL.createObjectURL(blob);
+      const { data, error } = await query;
+      // clear old
+      panel.innerHTML = '';
+      const manHolder = panel.previousElementSibling;
+      manHolder.innerHTML = '';
 
-          const dl = document.createElement('a');
-          dl.href = url;
-          dl.download = `${tableName}.csv`;
-          dl.innerText = 'Download CSV';
-          dl.style.display = 'inline-block';
-          dl.style.marginTop = '0.5em';
-
-          panel.appendChild(dl);
-          panel.appendChild(buildTable(data));
-        }
+      if (error) {
+        panel.innerText = `Error: ${error.message}`;
       }
-      showManhattanPlot(gene)
+      else if (!data.length) {
+        panel.innerText = 'No results found.';
+      }
+      else {
+        // CSV link + table
+        const headers = Object.keys(data[0]);
+        const rows = [
+          headers.join(','),
+          ...data.map(r => headers.map(h => JSON.stringify(r[h] ?? '')).join(','))
+        ];
+        const blob   = new Blob([ rows.join('\n') ], { type: 'text/csv' });
+        const url    = URL.createObjectURL(blob);
+        const dl     = document.createElement('a');
+        dl.href      = url;
+        dl.download  = `${tableName}.csv`;
+        dl.innerText = 'Download CSV';
+        dl.style.display   = 'inline-block';
+        dl.style.marginTop = '0.5em';
+
+        const tableEl = buildTable(data);
+        panel.appendChild(dl);
+        panel.appendChild(tableEl);
+
+        // Manhattan
+        await plotPanelManhattan(tableName, gene, manHolder);
+
+        // auto‑open the detail so you can see it
+        panel.parentElement.open = true;
+      }
     }
+
+  }
+
+  // helper to draw into the holder div:
+  async function plotPanelManhattan(tableName, gene, holderDiv) {
+    // pull out exactly this table’s variants + pvalues
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('variant, pvalue')
+      .eq('gene', gene);
+
+    if (error || !data.length) return;
+
+    // make a new div in the holder
+    const id = `man-${tableName}-${plotCount++}`;
+    const plotDiv = document.createElement('div');
+    plotDiv.id = id;
+    plotDiv.style = 'width:100%; height:250px; margin-bottom:0.5em;';
+    holderDiv.appendChild(plotDiv);
+
+    // bar‑style Manhattan
+    const x = data.map(d => d.variant);
+    const y = data.map(d => -Math.log10(d.pvalue));
+    Plotly.newPlot(id, [{
+      x, y, type: 'bar', marker:{ line:{ width:1 }}
+    }], {
+      title: `–log₁₀(p) in ${tableName}`,
+      xaxis:{type:'category', tickangle:-45, title:'Variant'},
+      yaxis:{ title:'–log₁₀(p)' },
+      margin:{ t:30, b:80, l:50, r:20 }
+    });
+  }
+
 
     // generic table builder, returns a <table> element
-    function buildTable(rows) {
-      const table = document.createElement('table');
-      table.border = 1;
-      const header = table.insertRow();
-      Object.keys(rows[0]).forEach(key => {
-        const th = document.createElement('th');
-        th.innerText = key;
-        header.appendChild(th);
-      });
+  function buildTable(rows) {
+    const table = document.createElement('table');
+    table.border = 1;
+    const header = table.insertRow();
+    Object.keys(rows[0]).forEach(key => {
+      const th = document.createElement('th');
+      th.innerText = key;
+      header.appendChild(th);
+    });
 
-      rows.forEach(row => {
-        const tr = table.insertRow();
-        Object.entries(row).forEach(([key, val]) => {
-          const td = tr.insertCell();
-          td.innerText = val;
-          if (key === 'variant') {
-            td.style.cursor = 'pointer';
-            td.style.textDecoration = 'underline';
-            td.addEventListener('click', () => showQtlPlot(row.variant, row.gene));
-          }
-        });
+    rows.forEach(row => {
+      const tr = table.insertRow();
+      Object.entries(row).forEach(([key, val]) => {
+        const td = tr.insertCell();
+        td.innerText = val;
+        if (key === 'variant') {
+          td.style.cursor = 'pointer';
+          td.style.textDecoration = 'underline';
+          td.addEventListener('click', () => showQtlPlot(row.variant, row.gene));
+        }
       });
-      return table;
-    }
+    });
+    return table;
+  }
 
 
   async function showQtlPlot(variant, gene) {
