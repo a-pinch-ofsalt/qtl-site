@@ -9,7 +9,6 @@
     a. [DONE] Receive IGK and IGL tables from Jacquelyn<br>
     b. Integrate tables into the website
 6. Add manhattan plots
-11. [BUG] two manhattan plots show
 12. [BUG] manhattan plots only for M_rank_all
 10. Properly label the plots
 9. Add download link for plots
