@@ -115,6 +115,7 @@
 
           panel.appendChild(dl);
           panel.appendChild(buildTable(data));
+          showManhattanPlot(gene)
         }
       }
     }
@@ -203,6 +204,55 @@
     });
 
   }
+
+  async function showManhattanPlot(gene) {
+  // fetch variant & pvalue
+    const { data, error } = await supabase
+      .from('M_all_rank')
+      .select('variant, pvalue')
+      .eq('gene', gene);
+
+    if (error) return console.error(error);
+
+    // sort rows by variant alphanumerically
+    data.sort((a, b) => a.variant.localeCompare(b, undefined, { numeric: true }));
+
+    // build bar‑chart arrays
+    const x = data.map(d => d.variant);
+    const y = data.map(d => -Math.log10(d.pvalue));
+
+    // new plot container
+    const idx = plotCount++;
+    const id  = `manhattan-${idx}`;
+    const wrapper = document.createElement('div');
+    wrapper.id = id;
+    wrapper.style = 'width:100%; height:300px;';
+    plotsContainer.appendChild(wrapper);
+
+    // draw as bar chart
+    Plotly.newPlot(id, [{
+      x,
+      y,
+      type: 'bar',
+      marker: {
+        line: { width: 1 },
+        opacity: 0.8
+      }
+    }], {
+      title: `–log₁₀(p) per SNP for ${gene}`,
+      xaxis: {
+        title: 'Variant',
+        tickangle: -45,
+        automargin: true
+      },
+      yaxis: {
+        title: '-log₁₀(p‑value)'
+      },
+      margin: { t: 40, l: 50, r: 20, b: 80 }
+    });
+  }
+
+
 </script>
 
 
