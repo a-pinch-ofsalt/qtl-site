@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>My Website</title>
-    <link rel="stylesheet" href="./style.css">
     <link rel="icon" href="./favicon.ico" type="image/x-icon">
   </head>
   
@@ -13,22 +12,160 @@
     <main>
         <h1>Welcome to My Website</h1>  
     </main>
+    
+    <label for="snpInput">SNP ID</label>
+    <input id="snpInput" placeholder="1027214">
+    <label for="geneInput">Gene</label>
+    <input id="geneInput" placeholder="IGHV3-64">
+    <button id="searchButton">Search</button>
+    <div id="boxplot" style="width:600px;height:400px;margin-top:1em;"></div>
   
   </body>
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module">    
-    const supabase = window.supabase.createClient('https://mwfhieyoqukgntpefijn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13ZmhpZXlvcXVrZ250cGVmaWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzOTU4NDUsImV4cCI6MjA2ODk3MTg0NX0.0ZLQjjO1AWibBhWZdueGmgbRv8QF_r7uyRmMExf2_tY')
-    const {data,error}=await supabase.from('qtls').select('*').eq('variant','1018693').eq('gene','IGHV3-66').single()
-    if (error) {
-      console.error('Supabase error:', error)
-      alert('Error: ' + error.message)
+  <div id="result-table"></div>
+
+
+<!-- 2) Somewhere in your HTML, reserve a div for the chart -->
+
+
+<!-- Include Plotly first -->
+<script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"></script>
+
+<!-- Your main module script -->
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+  const supabase = createClient('https://mwfhieyoqukgntpefijn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13ZmhpZXlvcXVrZ250cGVmaWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzOTU4NDUsImV4cCI6MjA2ODk3MTg0NX0.0ZLQjjO1AWibBhWZdueGmgbRv8QF_r7uyRmMExf2_tY');
+
+  document.getElementById("searchButton")
+    .addEventListener("click", onSearch);
+
+  async function onSearch() {
+    const snp   = document.getElementById("snpInput").value;
+    const gene  = document.getElementById("geneInput").value;
+    let result;
+
+    if (snp && gene) {
+      result = await supabase
+        .from('qtls')
+        .select('*')
+        .eq('variant', snp)
+        .eq('gene', gene);
+    } else if (snp) {
+      result = await supabase
+        .from('qtls')
+        .select('*')
+        .eq('variant', snp);
+    } else if (gene) {
+      result = await supabase
+        .from('qtls')
+        .select('*')
+        .eq('gene', gene);
     } else {
-      console.log('Data:', data)
-      alert(JSON.stringify(data, null, 2))
+      result = await supabase
+        .from('qtls')
+        .select('*');
     }
 
-  </script>
+    if (result.error) {
+      console.error(result.error);
+      return;
+    }
+    renderTable(result.data);
+  }
+
+  function renderTable(rows) {
+    const container = document.getElementById('result-table');
+    container.innerHTML = '';
+    if (!rows || rows.length === 0) {
+      container.innerText = 'No results found.';
+      return;
+    }
+
+    const table = document.createElement('table');
+    table.border = 1;
+
+    // header
+    const header = table.insertRow();
+    Object.keys(rows[0]).forEach(key => {
+      const th = document.createElement('th');
+      th.innerText = key;
+      header.appendChild(th);
+    });
+
+    // body
+    rows.forEach(row => {
+      const tr = table.insertRow();
+      Object.entries(row).forEach(([key, value]) => {
+        const td = tr.insertCell();
+        td.innerText = value;
+        if (key === 'variant') {
+          td.style.cursor = 'pointer';
+          td.style.textDecoration = 'underline';
+          td.addEventListener('click', () => showQtlPlot(row.variant, row.gene));
+        }
+      });
+    });
+
+    container.appendChild(table);
+  }
+
+  async function showQtlPlot(variant, gene) {
+    console.log(variant, gene)
+    // fetch SNP row
+    const { data: snpRow, error: e1 } = await supabase
+      .from('qtl_data')
+      .select('*')
+      .eq('feature', variant)
+      .eq('type', 'snp')
+      .single();
+    if (e1) return console.error(e1);
+
+    // fetch Gene row
+    const { data: geneRow, error: e2 } = await supabase
+      .from('qtl_data')
+      .select('*')
+      .eq('feature', gene)
+      .eq('type', 'gene')
+      .single();
+    if (e2) return console.error(e2);
+    console.log(snpRow)
+    console.log(geneRow)
+
+    // identify sample columns
+    const samples = Object.keys(snpRow).filter(k => !['feature','type'].includes(k));
+    
+    // group gene expression by genotype
+    const byGenotype = {};
+    samples.forEach(s => {
+      const g    = snpRow[s];
+      const expr = geneRow[s];
+      (byGenotype[g] = byGenotype[g] || []).push(expr);
+    });
+    console.log(samples)
+    // build traces
+    const traces = Object.entries(byGenotype)
+      .sort((a,b) => a[0] - b[0])
+      .map(([geno, vals]) => ({
+        y: vals,
+        name: `Genotype ${geno}`,
+        type: 'box'
+      }));
+    console.log(traces)
+
+    // plot
+    Plotly.newPlot('boxplot', traces, {
+      title: `${gene} expression by ${variant} genotype`,
+      xaxis: { title: 'Genotype' },
+      yaxis: { title: 'Expression' },
+      margin: { t:40, l:50, r:20, b:40 }
+    });
+  }
+</script>
+
+
+
   
 
 </html>
