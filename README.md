@@ -3,8 +3,8 @@
 1. [DONE] Link to raw data
 2. [DONE] Query by gene name. Output table.
 3. [DONE] Query by rsid. Output table.
-4. [DONE] Select queries for box plot.<br>
-5.<br>
+4. [DONE] Select queries for box plot.
+5.
     a. [DONE] Receive IGK and IGL tables from Jacquelyn<br>
     b. Integrate tables into the website
 6. Add manhattan plots
