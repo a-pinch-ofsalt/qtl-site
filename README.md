@@ -9,10 +9,13 @@
     a. [DONE] Receive IGK and IGL tables from Jacquelyn<br>
     b. Integrate tables into the website
 6. Add manhattan plots
+11. [BUG] two manhattan plots show
+12. [BUG] manhattan plots only for M_rank_all
 10. Properly label the plots
 9. Add download link for plots
 7. [BUG] First plot gets cut in half by second one
 8. [BUG] CSVs should only be generated once download button is clicked. This results in expensive client-side calculations every search
+
 
 supabase password: `oscarlr`
 
