@@ -1,0 +1,31 @@
+{
+  "dependencies": {
+    "@supabase/supabase-js": "^2.52.1",
+    "neo4j-driver": "^5.28.1",
+    "neovis.js": "^2.1.0",
+    "plotly.js-dist-min": "^3.0.3",
+    "serve": "^14.2.4"
+  },
+  "name": "qtl-site",
+  "description": "## TODO 1. [DONE] Link to raw data 2. [DONE] Query by gene name. Output table. 3. [DONE] Query by rsid. Output table. 4. [DONE] Select queries for box plot. 5.     a. [DONE] Receive IGK and IGL tables from Jacquelyn<br>     b. Integrate tables into the website 6. Add manhattan plots 12. [BUG] manhattan plots only for M_rank_all 10. Properly label the plots 9. Add download link for plots 7. [BUG] First plot gets cut in half by second one 8. [BUG] CSVs should only be generated once download button is clicked. This results in expensive client-side calculations every search",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "npx parcel build index.html --no-source-maps"
+  },
+
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/a-pinch-ofsalt/qtl-site.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/a-pinch-ofsalt/qtl-site/issues"
+  },
+  "homepage": "https://github.com/a-pinch-ofsalt/qtl-site#readme",
+  "devDependencies": {
+    "parcel": "^2.15.4",
+    "process": "^0.11.10"
+  }
+}
