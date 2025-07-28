@@ -163,8 +163,15 @@ async function onSearch() {
 
       panel.appendChild(dl);
       panel.appendChild(buildTable(data));
-      if (gene) await plotLocus(tableName, gene, manHolder);
-      else if (snp) await plotBySnp(tableName, snp, manHolder);
+
+      // inside onSearch(), after you pull tableName & panel:
+
+      if (gene) {
+        const geneTable = manHolder.dataset.geneTable;
+        console.log(geneTable)
+        await plotLocus(tableName, gene, geneTable, manHolder);
+  
+      } else if (snp) await plotBySnp(tableName, snp, manHolder);
       panel.parentElement.open = true;
     }
   }
@@ -191,12 +198,22 @@ function buildTable(rows) {
   return table;
 }
 
-async function plotLocus(table, gene, holder) {
-  // 1) fetch your p‑value points as before
-  const { data: pvData } = await supabase
-    .from(table)
+/**
+ * @param {string} pvalTable   – the Supabase table holding variant⇾pvalue data
+ * @param {string} gene        – the gene you filtered on
+ * @param {string} geneTable   – the Supabase table holding start,end,gene coords
+ * @param {HTMLElement} holder – where to append the Plotly div
+ */
+async function plotLocus(pvalTable, gene, geneTable, holder) {
+  // 1) pull your SNP → p‑value points for this gene
+  const { data: pvData, error: pvErr } = await supabase
+    .from(pvalTable)
     .select('variant,pvalue')
     .eq('gene', gene);
+  if (pvErr) {
+    console.error('plotLocus pval fetch error:', pvErr);
+    return;
+  }
   if (!pvData?.length) return;
 
   // 2) sort & cast to numbers
@@ -204,18 +221,22 @@ async function plotLocus(table, gene, holder) {
   const x = sorted.map(d => +d.variant);
   const y = sorted.map(d => -Math.log10(d.pvalue));
 
-  // 3) compute the span of your SNPs
+  // 3) compute the SNP span
   const minX = Math.min(...x);
   const maxX = Math.max(...x);
 
-  // 4) grab *all* genes overlapping [minX, maxX]
-  const { data: genes } = await supabase
-    .from('IGH_genes_locations')
+  // 4) fetch *all* genes overlapping [minX, maxX]
+  const { data: genes, error: geneErr } = await supabase
+    .from(geneTable)
     .select('start,end,gene')
-    .gte('end', minX)
+    .gte('end',   minX)
     .lte('start', maxX);
+  if (geneErr) {
+    console.error('plotLocus gene fetch error:', geneErr);
+    return;
+  }
 
-  // 5) build one rect per gene
+  // 5) build background rectangles
   const maxY = Math.max(...y) * 1.05;
   const shapes = genes.map(g => ({
     type:  'rect',
@@ -227,18 +248,18 @@ async function plotLocus(table, gene, holder) {
     line:     { width: 0 }
   }));
 
-  // 6) optional: label each gene
+  // 6) optional: label each gene above its box
   const annotations = genes.map(g => ({
-    x:  (g.start + g.end) / 2,
-    y:  maxY * 1.02,
-    text: g.gene,
+    x:         (g.start + g.end) / 2,
+    y:         maxY * 1.02,
+    text:      g.gene,
     showarrow: false,
     textangle: -45,
-    font: { size: 10 }
+    font:      { size: 10 }
   }));
 
-  // 7) render the plot
-  const id = `man-${table}-${plotCount++}`;
+  // 7) create the <div> and draw
+  const id = `man-${pvalTable}-${plotCount++}`;
   const div = document.createElement('div');
   div.id = id;
   div.style.cssText = 'width:100%;height:350px;';
@@ -248,13 +269,14 @@ async function plotLocus(table, gene, holder) {
     x, y, type: 'scatter', mode: 'markers',
     marker: { line: { width: 1 }}
   }], {
-    title: `–log₁₀(p) in ${table} (± all genes in locus)`,
+    title: `–log₁₀(p) in ${pvalTable} around ${gene}`,
     xaxis: { title: 'Genomic position' },
     yaxis: { title: '–log₁₀(p)' },
     shapes,
     annotations
   });
 }
+
 
 
 
