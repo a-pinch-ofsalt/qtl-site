@@ -163,7 +163,7 @@ async function onSearch() {
 
       panel.appendChild(dl);
       panel.appendChild(buildTable(data));
-      if (gene) await plotManhattan(tableName, gene, manHolder);
+      if (gene) await plotLocus(tableName, gene, manHolder);
       else if (snp) await plotBySnp(tableName, snp, manHolder);
       panel.parentElement.open = true;
     }
@@ -191,24 +191,72 @@ function buildTable(rows) {
   return table;
 }
 
-async function plotManhattan(table, gene, holder) {
-  const { data } = await supabase.from(table).select('variant,pvalue').eq('gene', gene);
-  if (!data?.length) return;
-  const sorted = data.slice().sort((a, b) => a.variant.localeCompare(b.variant, undefined, { numeric: true }));
-  const x = sorted.map((d) => d.variant);
-  const y = sorted.map((d) => -Math.log10(d.pvalue));
-  // const x = data.map((d) => d.variant);
-  // const y = data.map((d) => -Math.log10(d.pvalue));
-  const div = document.createElement('div');
+async function plotLocus(table, gene, holder) {
+  // 1) fetch your p‑value points as before
+  const { data: pvData } = await supabase
+    .from(table)
+    .select('variant,pvalue')
+    .eq('gene', gene);
+  if (!pvData?.length) return;
+
+  // 2) sort & cast to numbers
+  const sorted = pvData.slice().sort((a, b) => +a.variant - +b.variant);
+  const x = sorted.map(d => +d.variant);
+  const y = sorted.map(d => -Math.log10(d.pvalue));
+
+  // 3) compute the span of your SNPs
+  const minX = Math.min(...x);
+  const maxX = Math.max(...x);
+
+  // 4) grab *all* genes overlapping [minX, maxX]
+  const { data: genes } = await supabase
+    .from('IGH_genes_locations')
+    .select('start,end,gene')
+    .gte('end', minX)
+    .lte('start', maxX);
+
+  // 5) build one rect per gene
+  const maxY = Math.max(...y) * 1.05;
+  const shapes = genes.map(g => ({
+    type:  'rect',
+    x0:    g.start,
+    x1:    g.end,
+    y0:    0,
+    y1:    maxY,
+    fillcolor: 'rgba(50,150,200,0.1)',
+    line:     { width: 0 }
+  }));
+
+  // 6) optional: label each gene
+  const annotations = genes.map(g => ({
+    x:  (g.start + g.end) / 2,
+    y:  maxY * 1.02,
+    text: g.gene,
+    showarrow: false,
+    textangle: -45,
+    font: { size: 10 }
+  }));
+
+  // 7) render the plot
   const id = `man-${table}-${plotCount++}`;
-  div.id = id; div.style.cssText = 'width:100%;height:250px;';
+  const div = document.createElement('div');
+  div.id = id;
+  div.style.cssText = 'width:100%;height:350px;';
   holder.appendChild(div);
-  Plotly.newPlot(id, [{ x, y, type: 'scatter', mode: 'markers', marker: { line: { width: 1 }}}], {
-    title: `–log₁₀(p) in ${table}`,
-    xaxis: { type: 'category', tickangle: -45 },
-    yaxis: { title: '–log₁₀(p)' }
+
+  Plotly.newPlot(id, [{
+    x, y, type: 'scatter', mode: 'markers',
+    marker: { line: { width: 1 }}
+  }], {
+    title: `–log₁₀(p) in ${table} (± all genes in locus)`,
+    xaxis: { title: 'Genomic position' },
+    yaxis: { title: '–log₁₀(p)' },
+    shapes,
+    annotations
   });
 }
+
+
 
 async function plotBySnp(table, snp, holder) {
   const { data } = await supabase.from(table).select('gene,pvalue').eq('variant', snp);
