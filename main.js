@@ -225,12 +225,13 @@ async function plotLocus(pvalTable, gene, geneTable, holder) {
   const minX = Math.min(...x);
   const maxX = Math.max(...x);
 
+  const span = maxX - minX;
+  const pad  = span * 0.05 || 1;
+
   // 4) fetch *all* genes overlapping [minX, maxX]
   const { data: genes, error: geneErr } = await supabase
     .from(geneTable)
     .select('start,end,gene')
-    .gte('end',   minX)
-    .lte('start', maxX);
   if (geneErr) {
     console.error('plotLocus gene fetch error:', geneErr);
     return;
@@ -270,8 +271,8 @@ async function plotLocus(pvalTable, gene, geneTable, holder) {
     marker: { line: { width: 1 }}
   }], {
     title: `–log₁₀(p) in ${pvalTable} around ${gene}`,
-    xaxis: { title: 'Genomic position' },
-    yaxis: { title: '–log₁₀(p)' },
+    xaxis: { title: 'Genomic position', range: [minX - pad, maxX + pad] },
+    yaxis: { title: '–log₁₀(p)', fixedrange: true },
     shapes,
     annotations
   });
