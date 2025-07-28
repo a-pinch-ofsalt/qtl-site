@@ -33,9 +33,37 @@ const vizConfig = {
       trust: 'TRUST_SYSTEM_CA_SIGNED_CERTIFICATES',
     }
   },
-  initialCypher: "MATCH (g:Gene)-[r]->(s:SNP) RETURN g,r,s LIMIT 25",
-  labels: { Gene: { caption: 'name' } },
-  relationships: { AFFECTED_BY: { caption: 'count' } }
+  initialCypher: `
+    MATCH (g:Gene)-[r]-(s:SNP)
+    RETURN g, r, s
+    LIMIT 25
+  `,
+  labels: {
+    Gene: { caption: 'name' },
+    SNP:  { caption: 'id'   }
+  },
+  relationships: {
+    AFFECTED_BY: { caption: false, thickness: 1 },
+    AFFECTS:     { caption: false, thickness: 1 }
+  },
+  visConfig: {
+    layout: { improvedLayout: true },
+    physics: {
+      solver: 'forceAtlas2Based',
+      stabilization: { enabled: true, iterations: 300 },
+      forceAtlas2Based: {
+        gravitationalConstant: -80,
+        centralGravity: 0.01,
+        springLength: 150,
+        springConstant: 0.05
+      }
+    },
+    edges: {
+      arrows: { to: { enabled: true } },
+      smooth: { enabled: true, type: 'curvedCW' }
+    }
+  }
+
 };
 const viz = new NeoVis(vizConfig);
 viz.render();
