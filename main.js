@@ -2,7 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import neo4j from 'neo4j-driver';
-import NeoVis from 'neovis.js';
+import NeoVis from './neovis.js/dist/neovis.js';
 import Plotly from 'plotly.js-dist-min';
 
 // 1) Supabase client
@@ -34,35 +34,36 @@ const vizConfig = {
     }
   },
   initialCypher: `
-    MATCH (g:Gene)-[r]-(s:SNP)
-    RETURN g, r, s
-    LIMIT 25
+    MATCH (g1:Gene)-[r:SHARES_N]->(g2:Gene)
+    RETURN g1 AS g, r AS r, g2 AS s
   `,
   labels: {
-    Gene: { caption: 'name' },
-    SNP:  { caption: 'id'   }
+    Gene: { caption: 'Name' },
+    SNP:  { caption: 'ID'   }
   },
   relationships: {
-    AFFECTED_BY: { caption: false, thickness: 1 },
-    AFFECTS:     { caption: false, thickness: 1 }
-  },
-  visConfig: {
-    layout: { improvedLayout: true },
-    physics: {
-      solver: 'forceAtlas2Based',
-      stabilization: { enabled: true, iterations: 300 },
-      forceAtlas2Based: {
-        gravitationalConstant: -80,
-        centralGravity: 0.01,
-        springLength: 150,
-        springConstant: 0.05
-      }
-    },
-    edges: {
-      arrows: { to: { enabled: true } },
-      smooth: { enabled: true, type: 'curvedCW' }
-    }
+    SHARES_N:    { caption: 'n',   thickness: 2 },
+    AFFECTED_BY: { caption: false },
+    AFFECTS:     { caption: false }
   }
+  
+  // visConfig: {
+  //   layout: { improvedLayout: true },
+  //   physics: {
+  //     solver: 'forceAtlas2Based',
+  //     stabilization: { enabled: true, iterations: 300 },
+  //     forceAtlas2Based: {
+  //       gravitationalConstant: -80,
+  //       centralGravity: 0.01,
+  //       springLength: 150,
+  //       springConstant: 0.05
+  //     }
+  //   },
+  //   edges: {
+  //     arrows: { to: { enabled: true } },
+  //     smooth: { enabled: true, type: 'curvedCW' }
+  //   }
+  // }
 
 };
 const viz = new NeoVis(vizConfig);
