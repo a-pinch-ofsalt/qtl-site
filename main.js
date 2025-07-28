@@ -194,13 +194,16 @@ function buildTable(rows) {
 async function plotManhattan(table, gene, holder) {
   const { data } = await supabase.from(table).select('variant,pvalue').eq('gene', gene);
   if (!data?.length) return;
-  const x = data.map((d) => d.variant);
-  const y = data.map((d) => -Math.log10(d.pvalue));
+  const sorted = data.slice().sort((a, b) => a.variant.localeCompare(b.variant, undefined, { numeric: true }));
+  const x = sorted.map((d) => d.variant);
+  const y = sorted.map((d) => -Math.log10(d.pvalue));
+  // const x = data.map((d) => d.variant);
+  // const y = data.map((d) => -Math.log10(d.pvalue));
   const div = document.createElement('div');
   const id = `man-${table}-${plotCount++}`;
   div.id = id; div.style.cssText = 'width:100%;height:250px;';
   holder.appendChild(div);
-  Plotly.newPlot(id, [{ x, y, type: 'bar', marker: { line: { width: 1 }}}], {
+  Plotly.newPlot(id, [{ x, y, type: 'scatter', mode: 'markers', marker: { line: { width: 1 }}}], {
     title: `–log₁₀(p) in ${table}`,
     xaxis: { type: 'category', tickangle: -45 },
     yaxis: { title: '–log₁₀(p)' }
